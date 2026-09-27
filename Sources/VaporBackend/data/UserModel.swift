@@ -15,12 +15,28 @@ final class UserModel: Model, Content, @unchecked Sendable {
     @ID(key: .id)
     var id: UUID?
     
-    @Field(key: "name")
-    var name: String
+    @Field(key: "COMPANY_ID")
+    var companyId: String
     
-    init(id: UUID? = nil, name: String) {
+    @Field(key: "FIRST_NAME")
+    var firstName: String
+    
+    @Field(key: "LAST_NAME")
+    var lastName: String
+    
+    @Field(key: "EMAIL")
+    var email: String
+    
+    @Field(key: "PASSWORD")
+    var password: String
+    
+    init(id: UUID? = UUID(), companyId: String, firstName: String, lastName: String, email: String, password: String) {
         self.id = id
-        self.name = name
+        self.companyId = companyId
+        self.firstName = firstName
+        self.lastName = lastName
+        self.email = email
+        self.password = password
     }
     
     init() {
