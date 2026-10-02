@@ -14,6 +14,7 @@ struct UserController: RouteCollection {
         let userController = routes.grouped("users")
         userController.get(":companyId", use: getUserById)
         userController.post(use: createUser)
+        userController.delete(":companyId", use: deleteById)
     }
     
     /// Get an user by companyId
@@ -26,18 +27,20 @@ struct UserController: RouteCollection {
         guard let companyId = req.parameters.get("companyId") else {
             throw Abort(.badRequest, reason: "companyId not provided")
         }
-        
+        req.logger.info("companyId: \(companyId)")
         guard let foundUser = try await UserModel.query(on: req.db)
-            .filter(\.$companyId == companyId.uppercased()).first()
+            .filter(\.$companyId == companyId.lowercased()).first()
         else {
-            throw Abort(.notFound, reason: "User not found with \(companyId)")
+            throw Abort(.notFound, reason: "User with id \(companyId) not found")
         }
+        
+        req.logger.info("User: \(foundUser)")
         
         let returnUsers: UserWithOutPasswordDto = UserWithOutPasswordDto(
             companyId: foundUser.companyId,
             firstName: foundUser.firstName,
             lastName: foundUser.lastName,
-            email: foundUser.email
+            email: foundUser.email!
         )
         
         return returnUsers
@@ -49,22 +52,43 @@ struct UserController: RouteCollection {
     /// - Returns: HTTP 201 Created.
     /// - Throws: `Abort.badRequest` if the input json is invalid.
     func createUser(req: Request) async throws -> HTTPStatus {
-        do {
-            var user = try req.content.decode(UserDto.self)
-            let encryptedPassword = try Bcrypt.hash(user.password)
-            user.companyId = user.companyId.uppercased()
-            let newUser: UserModel = UserModel(
-                companyId: user.companyId,
-                firstName: user.firstName,
-                lastName: user.lastName,
-                email: user.email,
-                password: encryptedPassword
-            )
-            try await newUser.save(on: req.db)
-        } catch {
-            throw Abort(.badRequest, reason: "Json invalid")
+        var user = try req.content.decode(UserDto.self)
+
+        let encryptedPassword = try Bcrypt.hash(user.password)
+        user.companyId = user.companyId.lowercased()
+        let email = "\(user.companyId)@suki.com"
+
+        let newUser = UserModel(
+            companyId: user.companyId,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: email,
+            password: encryptedPassword
+        )
+        
+        try await newUser.save(on: req.db)
+
+        return .created
+    }
+    
+    /// Delete a user by ID
+    ///
+    /// - Parameter req: Object with the user data
+    /// - Returns: HTTP 202 Created.
+    /// - Throws: `Abort.badRequest` if user id is not provided or is an invalid id.
+    /// - Throws: `Abort.notFound` if user is not found.
+    func deleteById(req: Request) async throws -> HTTPStatus {
+        guard let companyId = req.parameters.get("companyId") else {
+            throw Abort(.badRequest, reason: "User id is not provided")
+        }
+        guard let existUser = try await UserModel
+            .query(on: req.db)
+            .filter(\.$companyId == companyId.lowercased())
+            .first() else {
+                throw Abort(.notFound, reason: "User with id \(companyId) not found")
         }
         
-        return HTTPStatus.created
+        try await existUser.delete(on: req.db)
+        return HTTPStatus.accepted
     }
 }

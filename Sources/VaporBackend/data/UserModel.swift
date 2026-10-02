@@ -25,12 +25,12 @@ final class UserModel: Model, Content, @unchecked Sendable {
     var lastName: String
     
     @Field(key: "EMAIL")
-    var email: String
+    var email: String?
     
     @Field(key: "PASSWORD")
     var password: String
     
-    init(id: UUID? = UUID(), companyId: String, firstName: String, lastName: String, email: String, password: String) {
+    init(id: UUID? = UUID(), companyId: String, firstName: String, lastName: String, email: String? = nil, password: String) {
         self.id = id
         self.companyId = companyId
         self.firstName = firstName
