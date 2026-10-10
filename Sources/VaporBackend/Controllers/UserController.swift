@@ -50,9 +50,17 @@ struct UserController: RouteCollection {
     ///
     /// - Parameter req: Object with the user data
     /// - Returns: HTTP 201 Created.
-    /// - Throws: `Abort.badRequest` if the input json is invalid.
+    /// - Throws: `Abort.badRequest` if the user already exists.
     func createUser(req: Request) async throws -> HTTPStatus {
         var user = try req.content.decode(UserDto.self)
+        
+        //Validate if user exists
+        if let _ = try await UserModel.query(on: req.db)
+            .filter(\.$companyId, .equal, user.companyId)
+            .first()
+        {
+            throw Abort(.badRequest, reason: "User already exists")
+        }
 
         let encryptedPassword = try Bcrypt.hash(user.password)
         user.companyId = user.companyId.lowercased()
