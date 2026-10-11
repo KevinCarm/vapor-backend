@@ -23,6 +23,9 @@ final class GroupModel: Model, Content, @unchecked Sendable {
     @Field(key: "IS_ACTIVE")
     var isActive: Bool
     
+    @Siblings(through: GroupsAndRolesModel.self, from: \.$group, to: \.$role)
+    var roles: [RoleModel]
+    
     init(id: UUID? = UUID(), groupName: String, description: String, isActive: Bool) {
         self.id = id
         self.groupName = groupName
